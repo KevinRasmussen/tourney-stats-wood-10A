@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Pitch Tracker</title>
+    <title>Pro Team Pitch Tracker LIVE</title>
     <style>
         :root {
             --primary: #0f172a; --bg: #f1f5f9; --card-bg: #ffffff;
@@ -15,67 +15,152 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
         body { background-color: var(--bg); color: var(--text); padding: 15px; max-width: 1100px; margin: 0 auto; }
         
-        /* LOCK SCREEN STYLING */
+        /* LOCK SCREEN */
         #lock-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--primary); color: white; display: flex;
             flex-direction: column; justify-content: center; align-items: center;
-            z-index: 1000; transition: opacity 0.5s;
+            z-index: 2000;
         }
 
         header { background: var(--primary); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
         .layout { display: grid; grid-template-columns: 1fr; gap: 15px; }
         @media (min-width: 900px) { .layout { grid-template-columns: 380px 1fr; } }
-        .card { background: var(--card-bg); border: 2px solid var(--border); border-radius: 12px; padding: 20px; }
-        .limit-config-header { background: #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        
+        .card { background: var(--card-bg); border: 2px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .limit-config-header { background: #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border); }
         .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
         input, select, button { border-radius: 6px; border: 1px solid var(--border); font-size: 1rem; width: 100%; margin-bottom: 10px; padding: 12px; }
-        .counter-input { width: 100%; font-size: 5rem; font-weight: 900; text-align: center; border: none; background: transparent; }
-        .status-pill { font-size: 0.8rem; font-weight: bold; padding: 5px 12px; border-radius: 20px; color: white; }
+        
+        .counter-input { 
+            width: 100%; background: transparent; border: 2px dashed transparent; text-align: center; 
+            font-size: 5.5rem; font-weight: 900; margin-bottom: 0; line-height: 1; padding: 10px; outline: none;
+        }
+        
+        .live-status-pills { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+        .status-pill { font-size: 0.8rem; font-weight: bold; padding: 6px 14px; border-radius: 20px; color: white; transition: 0.3s; }
+        
+        .counter-buttons { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+        .counter-buttons button { padding: 25px; font-size: 1.5rem; color: white; background: var(--primary); }
+        
         .player-row { border-bottom: 1px solid var(--border); padding: 12px 0; }
-        .player-header { display: flex; justify-content: space-between; cursor: pointer; }
-        .stint-list { margin-top: 10px; background: #f1f5f9; display: none; padding: 10px; border-radius: 8px; }
+        .player-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; }
+        .stint-list { margin-top: 10px; background: #f8fafc; border-radius: 8px; font-size: 0.85rem; display: none; border: 1px solid var(--border); }
         .stint-list.open { display: block; }
-        .rag-green { background: var(--rag-green); } .rag-yellow { background: var(--rag-yellow); }
-        .rag-orange { background: var(--rag-orange); } .rag-red { background: var(--rag-red); animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+        .stint-item { display: grid; grid-template-columns: 1fr 60px 100px; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+
+        .badge { padding: 4px 10px; border-radius: 6px; color: white; font-weight: bold; }
+        .rag-green { background-color: var(--rag-green) !important; color: white !important; }
+        .rag-yellow { background-color: var(--rag-yellow) !important; color: white !important; }
+        .rag-orange { background-color: var(--rag-orange) !important; color: white !important; }
+        .rag-red { background-color: var(--rag-red) !important; color: white !important; animation: pulse 1s infinite; }
+        
+        .text-green { color: var(--rag-green); }
+        .text-yellow { color: var(--rag-yellow); }
+        .text-orange { color: var(--rag-orange); }
+        .text-red { color: var(--rag-red); }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .hidden { display: none !important; }
     </style>
+</head>
+<body>
+
+    <div id="lock-screen">
+        <h2 style="margin-bottom: 20px;">Dugout Access Required</h2>
+        <input type="password" id="access-code-input" placeholder="Enter Access Code" style="width: 280px; text-align: center; margin-bottom: 15px;">
+        <button onclick="attemptAccess()" style="width: 280px; background: var(--rag-green); color: white; border: none;">Unlock Tracker</button>
+    </div>
+
+    <header><h1>Tourney Pitch Manager LIVE</h1></header>
+
+    <div class="layout">
+        <div class="card">
+            <div class="limit-config-header">
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label style="font-size: 0.7rem; font-weight: bold;">GAME MAX</label>
+                        <input type="number" id="game-max" value="50" oninput="handleRuleChange()">
+                    </div>
+                    <div class="config-item">
+                        <label style="font-size: 0.7rem; font-weight: bold;">TOURNEY MAX</label>
+                        <input type="number" id="tourney-max" value="100" oninput="handleRuleChange()">
+                    </div>
+                </div>
+            </div>
+
+            <h2>Live Control</h2>
+            <select id="active-pitcher" onchange="handlePitcherChange(this.value)"></select>
+            
+            <!-- CHANGED: Swapped static dropdown for a flexible text input -->
+            <label style="font-size: 0.75rem; font-weight: bold; color: var(--primary); display: block; margin-bottom: 4px;">CURRENT OPPONENT</label>
+            <input type="text" id="opponent-team" placeholder="vs. Enter Team Name" oninput="handleOpponentChange(this.value)">
+
+            <div class="live-status-pills">
+                <div id="game-pill" class="status-pill rag-green">Game: 0</div>
+                <div id="tourney-pill" class="status-pill rag-green">Tourney: 0</div>
+            </div>
+
+            <input type="number" class="counter-input text-green" id="live-count" value="0" oninput="handleManualInput(this.value)">
+
+            <div class="counter-buttons">
+                <button onclick="changePitch(1)">+1 PITCH</button>
+                <button onclick="changePitch(-1)" style="background:#64748b;">-1</button>
+            </div>
+            
+            <button onclick="saveStint()" style="background:var(--primary); color:white; padding: 18px; margin-top: 15px; font-size: 1.1rem;">COMMIT STINT TO LOG</button>
+        </div>
+
+        <div class="card">
+            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px;">
+                <h2>Tournament Log</h2>
+                <button style="width: auto; padding: 8px 15px; margin-bottom: 0;" onclick="addPlayer()">+ Add Player</button>
+            </div>
+            <div id="master-log"></div>
+            <button style="background:#cbd5e1; color:#475569; font-size:0.7rem; width:auto; margin-top:20px; border:none;" onclick="resetAll()">Full Tournament Reset</button>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // 🟢 PASTE YOUR FIREBASE CONFIG HERE
+        // 🟢 PASTE YOUR EXACT FIREBASE CONFIG HERE
         const firebaseConfig = {
-            apiKey: "AIzaSyCHoF69fKGGwbMKLBk10CQkT_26VwjOb2E",
-            authDomain: "tournamentpitchtracker.firebaseapp.com",
-            databaseURL: "https://tournamentpitchtracker-default-rtdb.firebaseio.com",
-            projectId: "tournamentpitchtracker",
-            storageBucket: "tournamentpitchtracker.firebasestorage.app",
-            messagingSenderId: "811876287070",
-            appId: "1:811876287070:web:610c53801c3a436e99eacf"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        
-        let appState = { roster: [], liveCount: 0, activePitcherId: "", tournamentRound: "Pool Play 1", rules: { gameMax: 50, tourneyMax: 100 } };
 
-        // ACCESS CONTROL LOGIC
+        let appState = {
+            roster: [],
+            liveCount: 0,
+            activePitcherId: "",
+            opponentTeam: "", // Tracks current opponent team text
+            rules: { gameMax: 50, tourneyMax: 100 }
+        };
+
+        // ACCESS CONTROL
         window.attemptAccess = function() {
-            const codeInput = document.getElementById('access-code-input').value.toUpperCase();
-            const CORRECT_CODE = "BASEBALL2026"; // ⬅️ CHANGE THIS SECRET CODE
-
-            if (codeInput === CORRECT_CODE) {
+            const input = document.getElementById('access-code-input').value.toUpperCase();
+            const SECRET = "BASEBALL2026"; // ⬅️ YOUR CODE HERE
+            if (input === SECRET) {
                 document.getElementById('lock-screen').classList.add('hidden');
-                startApp();
+                initSync();
             } else {
-                alert("Incorrect Access Code.");
+                alert("Access Denied");
             }
         };
 
-        function startApp() {
+        function initSync() {
             onValue(ref(db, 'pitch_tracker/'), (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
@@ -85,95 +170,145 @@
             });
         }
 
-        // DATABASE PUSH
         function pushState() { set(ref(db, 'pitch_tracker/'), appState); }
 
-        // BINDING GLOBAL ACTIONS
-        window.changePitch = (val) => { 
-            if(!appState.activePitcherId) return alert("Select Pitcher");
-            appState.liveCount = Math.max(0, (appState.liveCount || 0) + val); 
-            pushState(); 
-        };
-        window.handleManualInput = (val) => { appState.liveCount = parseInt(val) || 0; pushState(); };
-        window.handlePitcherChange = (val) => { appState.activePitcherId = val; appState.liveCount = 0; pushState(); };
-        window.handleRuleChange = () => {
-            appState.rules.gameMax = parseInt(document.getElementById('game-max').value);
-            appState.rules.tourneyMax = parseInt(document.getElementById('tourney-max').value);
+        // UTILITY: GET RAG COLOR
+        function getRagClass(current, max) {
+            if (!max || max <= 0) return 'rag-green';
+            const pct = current / max;
+            if (pct >= 1.0) return 'rag-red';
+            if (pct >= 0.75) return 'rag-orange';
+            if (pct >= 0.50) return 'rag-yellow';
+            return 'rag-green';
+        }
+
+        // ACTIONS
+        window.changePitch = (val) => {
+            if (!appState.activePitcherId) return alert("Select a pitcher");
+            appState.liveCount = Math.max(0, (appState.liveCount || 0) + val);
             pushState();
         };
-        window.addPlayer = () => {
-            const name = prompt("Name:"); if(!name) return;
-            appState.roster.push({ id: String(Date.now()), name, total: 0, stints: [] });
+
+        window.handleManualInput = (val) => {
+            appState.liveCount = Math.max(0, parseInt(val) || 0);
             pushState();
         };
-        window.saveStint = () => {
-            const p = appState.roster.find(x => x.id === appState.activePitcherId);
-            if(!p) return;
-            if(!p.stints) p.stints = [];
-            p.stints.push({ round: appState.tournamentRound, count: appState.liveCount, time: new Date().toLocaleTimeString() });
-            p.total += appState.liveCount;
+
+        window.handlePitcherChange = (id) => {
+            appState.activePitcherId = id;
             appState.liveCount = 0;
             pushState();
         };
 
-        function updateUI() {
-            const activeSelect = document.getElementById('active-pitcher');
-            activeSelect.innerHTML = '<option value="">-- Select --</option>' + 
-                appState.roster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name}</option>`).join('');
-            
-            document.getElementById('live-count').value = appState.liveCount;
-            document.getElementById('game-max').value = appState.rules.gameMax;
-            document.getElementById('tourney-max').value = appState.rules.tourneyMax;
+        // Syncs typed opponent name across all coach devices in real-time
+        window.handleOpponentChange = (val) => {
+            appState.opponentTeam = val;
+            pushState();
+        };
 
+        window.handleRuleChange = () => {
+            appState.rules.gameMax = parseInt(document.getElementById('game-max').value) || 50;
+            appState.rules.tourneyMax = parseInt(document.getElementById('tourney-max').value) || 100;
+            pushState();
+        };
+
+        window.addPlayer = () => {
+            const name = prompt("Player Name:"); if(!name) return;
+            const num = prompt("Jersey #:");
+            if(!appState.roster) appState.roster = [];
+            appState.roster.push({ id: String(Date.now()), name, num: num || '00', total: 0, stints: [] });
+            pushState();
+        };
+
+        window.saveStint = () => {
+            const p = appState.roster.find(x => x.id === appState.activePitcherId);
+            if (!p || appState.liveCount === 0) return alert("Select pitcher and ensure count > 0");
+            
+            // Fallback default if nothing was typed
+            const currentOpponent = appState.opponentTeam.trim() || "Unknown Opponent";
+            
+            if (!p.stints) p.stints = [];
+            p.stints.push({ 
+                opponent: currentOpponent, 
+                count: appState.liveCount, 
+                time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
+            });
+            p.total += appState.liveCount;
+            
+            // Clear the count for the next stint but keep the opponent name in case it's a mid-game pitching change
+            appState.liveCount = 0;
+            pushState();
+        };
+
+        window.resetAll = () => {
+            if (confirm("Clear all game logs?")) {
+                appState.roster.forEach(p => { p.total = 0; p.stints = []; });
+                appState.liveCount = 0;
+                appState.opponentTeam = "";
+                pushState();
+            }
+        };
+
+        function updateUI() {
+            const gMax = appState.rules.gameMax;
+            const tMax = appState.rules.tourneyMax;
+
+            // Sync Inputs
+            document.getElementById('game-max').value = gMax;
+            document.getElementById('tourney-max').value = tMax;
+            document.getElementById('live-count').value = appState.liveCount;
+            
+            // Keeps the opponent input field text in perfect sync on all viewing screens
+            document.getElementById('opponent-team').value = appState.opponentTeam || "";
+
+            // Dropdown
+            const select = document.getElementById('active-pitcher');
+            select.innerHTML = '<option value="">-- Select Pitcher --</option>' + 
+                appState.roster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
+
+            const activeP = appState.roster.find(x => x.id === appState.activePitcherId);
+            const liveInput = document.getElementById('live-count');
+
+            if (activeP) {
+                const tourneyTotalPlusLive = activeP.total + appState.liveCount;
+                
+                const gp = document.getElementById('game-pill');
+                gp.innerText = `In-Game: ${appState.liveCount} / ${gMax}`;
+                gp.className = `status-pill ${getRagClass(appState.liveCount, gMax)}`;
+
+                const tp = document.getElementById('tourney-pill');
+                tp.innerText = `Tourney: ${tourneyTotalPlusLive} / ${tMax}`;
+                tp.className = `status-pill ${getRagClass(tourneyTotalPlusLive, tMax)}`;
+
+                const gClass = getRagClass(appState.liveCount, gMax).replace('rag-', 'text-');
+                const tClass = getRagClass(tourneyTotalPlusLive, tMax).replace('rag-', 'text-');
+                
+                const severity = ['text-red', 'text-orange', 'text-yellow', 'text-green'];
+                liveInput.className = `counter-input ${severity.find(c => c === gClass || c === tClass)}`;
+            } else {
+                liveInput.className = "counter-input text-green";
+                document.getElementById('game-pill').className = "status-pill rag-green";
+                document.getElementById('tourney-pill').className = "status-pill rag-green";
+            }
+
+            // Log Rendering
             const log = document.getElementById('master-log');
-            log.innerHTML = appState.roster.map(p => `
+            log.innerHTML = [...appState.roster].sort((a,b) => b.total - a.total).map(p => `
                 <div class="player-row">
                     <div class="player-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                        <span>${p.name}</span>
-                        <span class="badge ${p.total >= appState.rules.tourneyMax ? 'rag-red' : 'rag-green'}" style="padding:5px; color:white; border-radius:5px;">${p.total} Total</span>
+                        <span>${p.name} <small>#${p.num}</small></span>
+                        <span>
+                            <span class="badge ${getRagClass(p.total, tMax)}">${p.total} / ${tMax}</span>
+                        </span>
                     </div>
                     <div class="stint-list">
-                        ${p.stints ? p.stints.map(s => `<div>${s.round}: ${s.count}</div>`).join('') : 'No games'}
+                        ${p.stints && p.stints.length ? p.stints.map(s => `
+                            <div class="stint-item"><span>vs. ${s.opponent}</span><b>${s.count}</b><span>${s.time}</span></div>
+                        `).join('') : '<div style="padding:10px; color:#94a3b8;">No data</div>'}
                     </div>
                 </div>
             `).join('');
         }
     </script>
-</head>
-<body>
-
-    <div id="lock-screen">
-        <h2 style="margin-bottom: 20px;">Dugout Access Required</h2>
-        <input type="password" id="access-code-input" placeholder="Enter Access Code" style="width: 250px; text-align: center;">
-        <button onclick="attemptAccess()" style="width: 250px; background: var(--rag-green);">Unlock Tracker</button>
-    </div>
-
-    <header><h1>Shared Pitch Tracker</h1></header>
-
-    <div class="layout">
-        <div class="card">
-            <div class="limit-config-header">
-                <div class="config-grid">
-                    <div class="config-item"><label>GAME MAX</label><input type="number" id="game-max" oninput="handleRuleChange()"></div>
-                    <div class="config-item"><label>TOURNEY MAX</label><input type="number" id="tourney-max" oninput="handleRuleChange()"></div>
-                </div>
-            </div>
-            <select id="active-pitcher" onchange="handlePitcherChange(this.value)"></select>
-            <input type="number" class="counter-input" id="live-count" oninput="handleManualInput(this.value)">
-            <div class="counter-buttons">
-                <button onclick="changePitch(1)" style="background:var(--primary); color:white; padding: 20px;">+1 PITCH</button>
-                <button onclick="changePitch(-1)" style="background:#64748b; color:white;">-1</button>
-            </div>
-            <button onclick="saveStint()" style="background:var(--rag-green); color:white; padding: 15px; margin-top: 10px;">COMMIT TO LOG</button>
-        </div>
-
-        <div class="card">
-            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h2>Tournament Log</h2>
-                <button onclick="addPlayer()" style="width:auto; padding: 5px 15px;">+ Add Player</button>
-            </div>
-            <div id="master-log"></div>
-        </div>
-    </div>
 </body>
 </html>
