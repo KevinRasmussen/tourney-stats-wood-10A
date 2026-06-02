@@ -473,7 +473,7 @@
                 }).join('');
             }
 
-            const primaryLabel = isOpponentTab ? `Jersey #${p.num}` : p.name;
+            const primaryLabel = isOpponentTab ? `Jersey #${p.num}` : `${p.name} (#${p.num})`;
 
             return `
                 <div class="player-row">
@@ -495,8 +495,13 @@
         function buildLogHTML(playerList, isOpponentTab = false) {
             const tMax = appState.rules.tourneyMax;
             
+            // 🔤 OUR ROSTER TAB: Sort alphabetically by player name
             if (!isOpponentTab) {
-                return [...playerList].sort((a,b) => b.total - a.total).map(p => buildPlayerRowHTML(p, false, tMax)).join('');
+                if (playerList.length === 0) return '<div style="padding:15px; color:#64748b; text-align:center;">No players on the roster yet.</div>';
+                return [...playerList]
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(p => buildPlayerRowHTML(p, false, tMax))
+                    .join('');
             }
 
             // Group opponents by Team Name
@@ -507,12 +512,14 @@
                 teamsMap[teamName].push(p);
             });
 
+            // 🔤 OPPONENT TAB: Sort team blocks alphabetically by Team Name
             const sortedTeams = Object.keys(teamsMap).sort((a, b) => a.localeCompare(b));
 
             if (sortedTeams.length === 0) return '<div style="padding:15px; color:#64748b; text-align:center;">No opponents tracked yet.</div>';
 
             return sortedTeams.map(team => {
-                const pitchers = teamsMap[team].sort((a, b) => b.total - a.total);
+                // 🔤 Within each team, sort pitchers alphabetically/numerically by jersey number
+                const pitchers = teamsMap[team].sort((a, b) => a.num.localeCompare(b.num, undefined, {numeric: true, sensitivity: 'base'}));
                 const pitchersHTML = pitchers.map(p => buildPlayerRowHTML(p, true, tMax)).join('');
                 return `
                     <div class="team-group-container">
@@ -539,14 +546,14 @@
             const select = document.getElementById('active-pitcher');
             let optionsHTML = '<option value="">-- Select Pitcher --</option>';
             
-            // 🔤 Sort Our Roster alphabetically by name
+            // Sort Our Roster alphabetically by name for dropdown
             const sortedRoster = [...appState.roster].sort((a, b) => a.name.localeCompare(b.name));
             optionsHTML += '<optgroup label="Our Roster">';
             optionsHTML += sortedRoster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
             optionsHTML += '</optgroup>';
             
             if (appState.opponents && appState.opponents.length > 0) {
-                // 🔤 Sort Opponents alphabetically by Team Name first, then by Jersey Number
+                // Sort Opponents alphabetically by Team Name first, then by Jersey Number for dropdown
                 const sortedOpponents = [...appState.opponents].sort((a, b) => {
                     const teamA = a.team || "Unknown Team";
                     const teamB = b.team || "Unknown Team";
