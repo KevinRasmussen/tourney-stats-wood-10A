@@ -223,13 +223,13 @@
 
         // 🟢 PASTE YOUR EXACT FIREBASE CONFIG HERE
         const firebaseConfig = {
-            apiKey: "AIzaSyCHoF69fKGGwbMKLBk10CQkT_26VwjOb2E",
-            authDomain: "tournamentpitchtracker.firebaseapp.com",
-            databaseURL: "https://tournamentpitchtracker-default-rtdb.firebaseio.com",
-            projectId: "tournamentpitchtracker",
-            storageBucket: "tournamentpitchtracker.firebasestorage.app",
-            messagingSenderId: "811876287070",
-            appId: "1:811876287070:web:610c53801c3a436e99eacf"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -538,13 +538,25 @@
 
             const select = document.getElementById('active-pitcher');
             let optionsHTML = '<option value="">-- Select Pitcher --</option>';
+            
+            // 🔤 Sort Our Roster alphabetically by name
+            const sortedRoster = [...appState.roster].sort((a, b) => a.name.localeCompare(b.name));
             optionsHTML += '<optgroup label="Our Roster">';
-            optionsHTML += appState.roster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
+            optionsHTML += sortedRoster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
             optionsHTML += '</optgroup>';
             
             if (appState.opponents && appState.opponents.length > 0) {
+                // 🔤 Sort Opponents alphabetically by Team Name first, then by Jersey Number
+                const sortedOpponents = [...appState.opponents].sort((a, b) => {
+                    const teamA = a.team || "Unknown Team";
+                    const teamB = b.team || "Unknown Team";
+                    const teamComp = teamA.localeCompare(teamB);
+                    if (teamComp !== 0) return teamComp;
+                    return a.num.localeCompare(b.num, undefined, {numeric: true, sensitivity: 'base'});
+                });
+
                 optionsHTML += '<optgroup label="Opponent Pitchers">';
-                optionsHTML += appState.opponents.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>[OPP] #${p.num} - ${p.team || 'Unknown Team'}</option>`).join('');
+                optionsHTML += sortedOpponents.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>[OPP] #${p.num} - ${p.team || 'Unknown Team'}</option>`).join('');
                 optionsHTML += '</optgroup>';
             }
             select.innerHTML = optionsHTML;
