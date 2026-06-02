@@ -59,9 +59,14 @@
         .tab-btn { background: none; border: none; padding: 8px 12px; font-size: 0.85rem; font-weight: bold; cursor: pointer; color: #475569; margin-bottom: 0; }
         .tab-btn.active { background: var(--card-bg); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
+        /* TEAM WRAPPER FOR OPPONENTS */
+        .team-group-container { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+        .team-group-title { font-size: 1rem; font-weight: bold; color: var(--primary); border-bottom: 2px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+
         .player-row { border-bottom: 1px solid var(--border); padding: 12px 0; }
+        .player-row:last-child { border-bottom: none; }
         .player-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; }
-        .stint-list { margin-top: 10px; background: #f8fafc; border-radius: 8px; font-size: 0.85rem; display: none; border: 1px solid var(--border); padding: 5px; }
+        .stint-list { margin-top: 10px; background: #ffffff; border-radius: 8px; font-size: 0.85rem; display: none; border: 1px solid var(--border); padding: 5px; }
         .stint-list.open { display: block; }
         
         .game-group-header { background: #e2e8f0; font-weight: bold; padding: 6px 10px; margin-top: 5px; border-radius: 4px; font-size: 0.8rem; display: flex; justify-content: space-between;}
@@ -114,15 +119,16 @@
                 <h4>2. Counting & Committing</h4>
                 <ul>
                     <li>Select a pitcher from the dropdown menu to sync live data tracking.</li>
-                    <li>Use **+1 PITCH** for active counts. Click **COMMIT STINT TO LOG** to clear the big screen and lock counts permanently into database metrics.</li>
+                    <li>Use **+1 PITCH** for active counts. **Shortcut:** You can also tap directly on the giant numbers in the center to type a flat count manually.</li>
+                    <li>Click **COMMIT STINT TO LOG** to clear the big screen and lock counts permanently into database metrics.</li>
                 </ul>
             </div>
             <div class="inst-box">
-                <h4>3. Opponent Tracking (Game-by-Game)</h4>
+                <h4>3. Opponent Tracking & Team Groupings</h4>
                 <ul>
                     <li>Switch to the **Opponent Pitchers** tab and click **+ Add Opponent Pitcher**.</li>
-                    <li>Enter their jersey number, then type the *total number of previous tournament games* they pitched in today/this weekend.</li>
-                    <li>The app will automatically loop and prompt you for **Game 1 Pitches**, **Game 2 Pitches**, etc. It sums them up automatically so you don't have to do any math.</li>
+                    <li>Enter their **Jersey #** and **Team Name**. The app automatically groups all tracked pitchers together by team.</li>
+                    <li>Type the *total number of previous tournament games* they pitched in. The app will loop and prompt you for **Game 1 Pitches**, **Game 2 Pitches**, etc., automatically summing up their tournament total.</li>
                 </ul>
             </div>
             <div class="inst-box">
@@ -317,6 +323,8 @@
 
         window.addOpponent = () => {
             const num = prompt("Opponent Jersey #:"); if(!num) return;
+            const teamInput = prompt("Opponent Team Name:", "Unknown Team");
+            const teamName = teamInput ? teamInput.trim() : "Unknown Team";
             
             const prevGamesInput = prompt("How many previous tournament games has this pitcher thrown in? (Enter 0 if fresh):", "0");
             const totalGames = parseInt(prevGamesInput) || 0;
@@ -343,6 +351,7 @@
                 id: 'opp_' + Date.now(), 
                 name: `Opponent #${num}`, 
                 num: num, 
+                team: teamName,
                 total: accumulatedTotal, 
                 stints: loadedStints 
             });
@@ -357,7 +366,11 @@
             if (isOpponent) {
                 const newNum = prompt("Edit Opponent Jersey #:", p.num);
                 if (newNum === null) return;
+                const newTeam = prompt("Edit Team Name:", p.team || "Unknown Team");
+                if (newTeam === null) return;
+                
                 p.num = newNum.trim() || p.num;
+                p.team = newTeam.trim() || "Unknown Team";
                 p.name = `Opponent #${p.num}`;
             } else {
                 const newName = prompt("Edit Player Name:", p.name);
@@ -421,60 +434,93 @@
         window.resetAll = () => {
             if (confirm("Clear all game logs? (Rosters will be kept)")) {
                 appState.roster.forEach(p => { p.total = 0; p.stints = []; });
-                appState.opponents.forEach(p => { p.total = 0; p.stints = []; });
+                appState.opponents.forEach(p => { p.total = 0; p.stints = []; p.team = p.team || "Unknown Team"; });
                 appState.liveCount = 0; appState.opponentTeam = ""; appState.currentInning = "Inning 1";
                 pushState();
             }
         };
 
+        function buildPlayerRowHTML(p, isOpponentTab, tMax) {
+            const gamesMap = {};
+            if (p.stints) {
+                p.stints.forEach((s, idx) => {
+                    if (!gamesMap[s.opponent]) gamesMap[s.opponent] = { items: [], gameTotal: 0 };
+                    gamesMap[s.opponent].items.push({...s, originalIndex: idx});
+                    gamesMap[s.opponent].gameTotal += s.count;
+                });
+            }
+
+            let gamesHTML = '<div style="padding:10px; color:#94a3b8;">No data</div>';
+            if (Object.keys(gamesMap).length > 0) {
+                gamesHTML = Object.keys(gamesMap).map(opponentName => {
+                    const gameData = gamesMap[opponentName];
+                    return `
+                        <div class="game-group">
+                            <div class="game-group-header">
+                                <span>vs. ${opponentName}</span>
+                                <span>Total: ${gameData.gameTotal}</span>
+                            </div>
+                            ${gameData.items.map(s => `
+                                <div class="stint-item">
+                                    <span>${s.inning}</span>
+                                    <b>${s.count}</b>
+                                    <span>${s.time}</span>
+                                    <button class="del-stint-btn" onclick="deleteStint('${p.id}', ${s.originalIndex}, ${isOpponentTab})">🗑</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            const primaryLabel = isOpponentTab ? `Jersey #${p.num}` : p.name;
+
+            return `
+                <div class="player-row">
+                    <div class="player-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <span>${primaryLabel}</span>
+                        <span class="badge ${getRagClass(p.total, tMax)}">${p.total} / ${tMax}</span>
+                    </div>
+                    <div class="stint-list">
+                        ${gamesHTML}
+                        <div class="player-mgmt-panel">
+                            <button class="btn-sm" style="background:#cbd5e1;" onclick="editPlayer('${p.id}', ${isOpponentTab})">✏️ Edit</button>
+                            <button class="btn-sm" style="background:var(--rag-red); color:white;" onclick="removePlayer('${p.id}', ${isOpponentTab})">🗑️ Remove</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function buildLogHTML(playerList, isOpponentTab = false) {
             const tMax = appState.rules.tourneyMax;
-            return [...playerList].sort((a,b) => b.total - a.total).map(p => {
-                const gamesMap = {};
-                if (p.stints) {
-                    p.stints.forEach((s, idx) => {
-                        if (!gamesMap[s.opponent]) gamesMap[s.opponent] = { items: [], gameTotal: 0 };
-                        gamesMap[s.opponent].items.push({...s, originalIndex: idx});
-                        gamesMap[s.opponent].gameTotal += s.count;
-                    });
-                }
+            
+            if (!isOpponentTab) {
+                return [...playerList].sort((a,b) => b.total - a.total).map(p => buildPlayerRowHTML(p, false, tMax)).join('');
+            }
 
-                let gamesHTML = '<div style="padding:10px; color:#94a3b8;">No data</div>';
-                if (Object.keys(gamesMap).length > 0) {
-                    gamesHTML = Object.keys(gamesMap).map(opponentName => {
-                        const gameData = gamesMap[opponentName];
-                        return `
-                            <div class="game-group">
-                                <div class="game-group-header">
-                                    <span>vs. ${opponentName}</span>
-                                    <span>Total: ${gameData.gameTotal}</span>
-                                </div>
-                                ${gameData.items.map(s => `
-                                    <div class="stint-item">
-                                        <span>${s.inning}</span>
-                                        <b>${s.count}</b>
-                                        <span>${s.time}</span>
-                                        <button class="del-stint-btn" onclick="deleteStint('${p.id}', ${s.originalIndex}, ${isOpponentTab})">🗑</button>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                    }).join('');
-                }
+            // Group opponents by Team Name
+            const teamsMap = {};
+            playerList.forEach(p => {
+                const teamName = p.team || "Unknown Team";
+                if (!teamsMap[teamName]) teamsMap[teamName] = [];
+                teamsMap[teamName].push(p);
+            });
 
+            const sortedTeams = Object.keys(teamsMap).sort((a, b) => a.localeCompare(b));
+
+            if (sortedTeams.length === 0) return '<div style="padding:15px; color:#64748b; text-align:center;">No opponents tracked yet.</div>';
+
+            return sortedTeams.map(team => {
+                const pitchers = teamsMap[team].sort((a, b) => b.total - a.total);
+                const pitchersHTML = pitchers.map(p => buildPlayerRowHTML(p, true, tMax)).join('');
                 return `
-                    <div class="player-row">
-                        <div class="player-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                            <span>${p.name}</span>
-                            <span class="badge ${getRagClass(p.total, tMax)}">${p.total} / ${tMax}</span>
+                    <div class="team-group-container">
+                        <div class="team-group-title">
+                            <span>📋 ${team}</span>
+                            <span style="font-size: 0.75rem; font-weight: normal; color: #475569; align-self: center;">${pitchers.length} Pitcher(s)</span>
                         </div>
-                        <div class="stint-list">
-                            ${gamesHTML}
-                            <div class="player-mgmt-panel">
-                                <button class="btn-sm" style="background:#cbd5e1;" onclick="editPlayer('${p.id}', ${isOpponentTab})">✏️ Edit</button>
-                                <button class="btn-sm" style="background:var(--rag-red); color:white;" onclick="removePlayer('${p.id}', ${isOpponentTab})">🗑️ Remove</button>
-                            </div>
-                        </div>
+                        ${pitchersHTML}
                     </div>
                 `;
             }).join('');
@@ -498,7 +544,7 @@
             
             if (appState.opponents && appState.opponents.length > 0) {
                 optionsHTML += '<optgroup label="Opponent Pitchers">';
-                optionsHTML += appState.opponents.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>[OPP] Jersey #${p.num}</option>`).join('');
+                optionsHTML += appState.opponents.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>[OPP] #${p.num} - ${p.team || 'Unknown Team'}</option>`).join('');
                 optionsHTML += '</optgroup>';
             }
             select.innerHTML = optionsHTML;
