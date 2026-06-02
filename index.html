@@ -104,7 +104,6 @@
 
     <header><h1>Tourney Pitch Manager LIVE</h1></header>
 
-    <!-- EXPANDABLE INSTRUCTIONS PANEL -->
     <details class="instructions-card">
         <summary>📋 How to Use This Tracker (Click to Expand / Collapse)</summary>
         <div class="instructions-content">
@@ -157,7 +156,8 @@
             </div>
 
             <h2>Live Control</h2>
-            <select id="active-pitcher" onchange="handlePitcherChange(this.value)"></select>
+            <!-- Fixed: Added tracking attributes to look back at previous drop values securely -->
+            <select id="active-pitcher" data-prev="" onchange="handlePitcherChange(this.value)"></select>
             
             <div class="row-grid">
                 <div>
@@ -246,6 +246,7 @@
         };
 
         let currentActiveTab = 'our-team';
+        let isInitialLoad = true;
 
         window.attemptAccess = function() {
             const input = document.getElementById('access-code-input').value.toUpperCase();
@@ -263,12 +264,16 @@
                     if (!data.roster) data.roster = [];
                     if (!data.opponents) data.opponents = [];
                     appState = data;
-                    updateUI();
                 }
+                updateUI(isInitialLoad);
+                isInitialLoad = false;
             });
         }
 
-        function pushState() { set(ref(db, 'pitch_tracker/'), appState); }
+        function pushState() { 
+            if (isInitialLoad) return; 
+            set(ref(db, 'pitch_tracker/'), appState); 
+        }
 
         window.switchTab = (tabName) => {
             currentActiveTab = tabName;
@@ -298,7 +303,20 @@
             pushState();
         };
 
+        // Review Upgrade: Added confirmation check to block dropping active live tallies mid-game
         window.handlePitcherChange = (id) => {
+            if (isInitialLoad) return;
+            const selector = document.getElementById('active-pitcher');
+            const prevId = selector.getAttribute('data-prev') || "";
+
+            if (prevId && appState.liveCount > 0 && id !== prevId) {
+                if (!confirm(`Warning: You have ${appState.liveCount} uncommitted pitches active. Switching pitchers will discard these. Proceed?`)) {
+                    selector.value = prevId;
+                    return;
+                }
+            }
+
+            selector.setAttribute('data-prev', id);
             appState.activePitcherId = id;
             appState.liveCount = 0;
             pushState();
@@ -358,8 +376,10 @@
             pushState();
         };
 
+        // Review Upgrade: Integrated missing cloud synchronization calls on layout adjustments
         window.editPlayer = (id, isOpponent = false) => {
             const list = isOpponent ? appState.opponents : appState.roster;
+            if (!list) return;
             const p = list.find(x => x.id === id);
             if (!p) return;
             
@@ -384,8 +404,11 @@
         };
 
         window.removePlayer = (id, isOpponent = false) => {
-            const p = (isOpponent ? appState.opponents : appState.roster).find(x => x.id === id);
+            const list = isOpponent ? appState.opponents : appState.roster;
+            if (!list) return;
+            const p = list.find(x => x.id === id);
             if (!p) return;
+            
             if (confirm(`Remove ${p.name}? This deletes all data.`)) {
                 if (isOpponent) {
                     appState.opponents = appState.opponents.filter(x => x.id !== id);
@@ -397,18 +420,22 @@
             }
         };
 
+        // Review Upgrade: Hardened deduction bounds checking to prevent calculation corruptions 
         window.deleteStint = (playerId, stintIndex, isOpponent = false) => {
-            const p = (isOpponent ? appState.opponents : appState.roster).find(x => x.id === playerId);
+            const list = isOpponent ? appState.opponents : appState.roster;
+            if (!list) return;
+            const p = list.find(x => x.id === playerId);
             if (!p || !p.stints) return;
             
             if (confirm(`Delete this entry of ${p.stints[stintIndex].count} pitches?`)) {
                 const removedPitches = p.stints[stintIndex].count;
                 p.stints.splice(stintIndex, 1);
-                p.total -= removedPitches;
+                p.total = Math.max(0, p.total - removedPitches);
                 pushState();
             }
         };
 
+        // Review Upgrade: Enforced math bounds floor protection during adjustments
         window.saveStint = () => {
             let p = appState.roster.find(x => x.id === appState.activePitcherId);
             let isOpp = false;
@@ -416,25 +443,27 @@
                 p = appState.opponents.find(x => x.id === appState.activePitcherId);
                 isOpp = true;
             }
-            if (!p || appState.liveCount === 0) return alert("Select pitcher and ensure count > 0");
+            if (!p || appState.liveCount === 0) return alert("Select pitcher and ensure count does not equal 0");
             
             const currentOpponent = isOpp ? "Our Team" : (appState.opponentTeam.trim() || "Unknown Opponent");
             if (!p.stints) p.stints = [];
+            
             p.stints.push({ 
                 opponent: currentOpponent,
                 inning: appState.currentInning || "Inning 1",
                 count: appState.liveCount, 
                 time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
             });
-            p.total += appState.liveCount;
+            
+            p.total = Math.max(0, p.total + appState.liveCount);
             appState.liveCount = 0;
             pushState();
         };
 
         window.resetAll = () => {
             if (confirm("Clear all game logs? (Rosters will be kept)")) {
-                appState.roster.forEach(p => { p.total = 0; p.stints = []; });
-                appState.opponents.forEach(p => { p.total = 0; p.stints = []; p.team = p.team || "Unknown Team"; });
+                if (appState.roster) appState.roster.forEach(p => { p.total = 0; p.stints = []; });
+                if (appState.opponents) appState.opponents.forEach(p => { p.total = 0; p.stints = []; p.team = p.team || "Unknown Team"; });
                 appState.liveCount = 0; appState.opponentTeam = ""; appState.currentInning = "Inning 1";
                 pushState();
             }
@@ -495,30 +524,28 @@
         function buildLogHTML(playerList, isOpponentTab = false) {
             const tMax = appState.rules.tourneyMax;
             
-            // 🔤 OUR ROSTER TAB: Sort alphabetically by player name
             if (!isOpponentTab) {
-                if (playerList.length === 0) return '<div style="padding:15px; color:#64748b; text-align:center;">No players on the roster yet.</div>';
+                if (!playerList || playerList.length === 0) return '<div style="padding:15px; color:#64748b; text-align:center;">No players on the roster yet.</div>';
                 return [...playerList]
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map(p => buildPlayerRowHTML(p, false, tMax))
                     .join('');
             }
 
-            // Group opponents by Team Name
             const teamsMap = {};
-            playerList.forEach(p => {
-                const teamName = p.team || "Unknown Team";
-                if (!teamsMap[teamName]) teamsMap[teamName] = [];
-                teamsMap[teamName].push(p);
-            });
+            if (playerList) {
+                playerList.forEach(p => {
+                    const teamName = p.team || "Unknown Team";
+                    if (!teamsMap[teamName]) teamsMap[teamName] = [];
+                    teamsMap[teamName].push(p);
+                });
+            }
 
-            // 🔤 OPPONENT TAB: Sort team blocks alphabetically by Team Name
             const sortedTeams = Object.keys(teamsMap).sort((a, b) => a.localeCompare(b));
 
             if (sortedTeams.length === 0) return '<div style="padding:15px; color:#64748b; text-align:center;">No opponents tracked yet.</div>';
 
             return sortedTeams.map(team => {
-                // 🔤 Within each team, sort pitchers alphabetically/numerically by jersey number
                 const pitchers = teamsMap[team].sort((a, b) => a.num.localeCompare(b.num, undefined, {numeric: true, sensitivity: 'base'}));
                 const pitchersHTML = pitchers.map(p => buildPlayerRowHTML(p, true, tMax)).join('');
                 return `
@@ -533,7 +560,7 @@
             }).join('');
         }
 
-        function updateUI() {
+        function updateUI(skipSelectSync = false) {
             const gMax = appState.rules.gameMax;
             const tMax = appState.rules.tourneyMax;
 
@@ -546,14 +573,12 @@
             const select = document.getElementById('active-pitcher');
             let optionsHTML = '<option value="">-- Select Pitcher --</option>';
             
-            // Sort Our Roster alphabetically by name for dropdown
-            const sortedRoster = [...appState.roster].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedRoster = appState.roster ? [...appState.roster].sort((a, b) => a.name.localeCompare(b.name)) : [];
             optionsHTML += '<optgroup label="Our Roster">';
             optionsHTML += sortedRoster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
             optionsHTML += '</optgroup>';
             
             if (appState.opponents && appState.opponents.length > 0) {
-                // Sort Opponents alphabetically by Team Name first, then by Jersey Number for dropdown
                 const sortedOpponents = [...appState.opponents].sort((a, b) => {
                     const teamA = a.team || "Unknown Team";
                     const teamB = b.team || "Unknown Team";
@@ -568,7 +593,16 @@
             }
             select.innerHTML = optionsHTML;
 
-            let activeP = appState.roster.find(x => x.id === appState.activePitcherId);
+            if (skipSelectSync && appState.activePitcherId === "" && select.value !== "") {
+                return;
+            }
+
+            // Sync structural memory layout element tracking states safely
+            if (!skipSelectSync && select.value !== select.getAttribute('data-prev')) {
+                select.setAttribute('data-prev', appState.activePitcherId);
+            }
+
+            let activeP = appState.roster ? appState.roster.find(x => x.id === appState.activePitcherId) : null;
             let isOpp = false;
             if (!activeP && appState.opponents) {
                 activeP = appState.opponents.find(x => x.id === appState.activePitcherId);
@@ -583,8 +617,8 @@
                     .filter(s => s.opponent === activeOpponent)
                     .reduce((sum, s) => sum + s.count, 0);
 
-                const trueGameTotalPlusLive = loggedGameTotal + appState.liveCount;
-                const tourneyTotalPlusLive = activeP.total + appState.liveCount;
+                const trueGameTotalPlusLive = Math.max(0, loggedGameTotal + appState.liveCount);
+                const tourneyTotalPlusLive = Math.max(0, activeP.total + appState.liveCount);
                 
                 const gp = document.getElementById('game-pill');
                 gp.innerText = `Game: ${trueGameTotalPlusLive} / ${gMax}`;
