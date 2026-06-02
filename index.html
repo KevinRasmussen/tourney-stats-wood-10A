@@ -23,6 +23,16 @@
         }
 
         header { background: var(--primary); color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        
+        /* INSTRUCTIONS ACCORDION STYLE */
+        .instructions-card { background: #f8fafc; border: 2px dashed var(--border); border-radius: 12px; padding: 12px 20px; margin-bottom: 15px; }
+        .instructions-card summary { font-weight: bold; cursor: pointer; color: #475569; outline: none; user-select: none; }
+        .instructions-content { margin-top: 15px; font-size: 0.9rem; line-height: 1.5; color: #334155; display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 768px) { .instructions-content { grid-template-columns: 1fr 1fr; } }
+        .inst-box { background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .inst-box h4 { margin-bottom: 6px; color: var(--primary); font-size: 0.95rem; }
+        .inst-box ul { padding-left: 18px; }
+
         .layout { display: grid; grid-template-columns: 1fr; gap: 15px; }
         @media (min-width: 900px) { .layout { grid-template-columns: 380px 1fr; } }
         
@@ -45,6 +55,10 @@
         .counter-buttons { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
         .counter-buttons button { padding: 25px; font-size: 1.5rem; color: white; background: var(--primary); }
         
+        .tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #e2e8f0; padding: 4px; border-radius: 8px; }
+        .tab-btn { background: none; border: none; padding: 8px 12px; font-size: 0.85rem; font-weight: bold; cursor: pointer; color: #475569; margin-bottom: 0; }
+        .tab-btn.active { background: var(--card-bg); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
         .player-row { border-bottom: 1px solid var(--border); padding: 12px 0; }
         .player-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-weight: bold; }
         .stint-list { margin-top: 10px; background: #f8fafc; border-radius: 8px; font-size: 0.85rem; display: none; border: 1px solid var(--border); padding: 5px; }
@@ -52,7 +66,6 @@
         
         .game-group-header { background: #e2e8f0; font-weight: bold; padding: 6px 10px; margin-top: 5px; border-radius: 4px; font-size: 0.8rem; display: flex; justify-content: space-between;}
         
-        /* UPDATED STINT ITEM LAYOUT FOR DELETE BUTTON */
         .stint-item { display: grid; grid-template-columns: 1fr 60px 80px 40px; align-items: center; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
         .stint-item:last-child { border-bottom: none; }
         .del-stint-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem; padding: 0; margin: 0; text-align: center; width: 30px;}
@@ -85,6 +98,42 @@
     </div>
 
     <header><h1>Tourney Pitch Manager LIVE</h1></header>
+
+    <!-- EXPANDABLE INSTRUCTIONS PANEL -->
+    <details class="instructions-card">
+        <summary>📋 How to Use This Tracker (Click to Expand / Collapse)</summary>
+        <div class="instructions-content">
+            <div class="inst-box">
+                <h4>1. Live Setup & Rules</h4>
+                <ul>
+                    <li>Set **GAME MAX** and **TOURNEY MAX** thresholds at the top left. Color alerts switch automatically based on these numbers.</li>
+                    <li>Type the current **Opponent Team** name and pick the **Inning** before starting a defensive tracking stretch.</li>
+                </ul>
+            </div>
+            <div class="inst-box">
+                <h4>2. Counting & Committing</h4>
+                <ul>
+                    <li>Select a pitcher from the dropdown menu to sync live data tracking.</li>
+                    <li>Use **+1 PITCH** for active counts. Click **COMMIT STINT TO LOG** to clear the big screen and lock counts permanently into database metrics.</li>
+                </ul>
+            </div>
+            <div class="inst-box">
+                <h4>3. Opponent Tracking (Game-by-Game)</h4>
+                <ul>
+                    <li>Switch to the **Opponent Pitchers** tab and click **+ Add Opponent Pitcher**.</li>
+                    <li>Enter their jersey number, then type the *total number of previous tournament games* they pitched in today/this weekend.</li>
+                    <li>The app will automatically loop and prompt you for **Game 1 Pitches**, **Game 2 Pitches**, etc. It sums them up automatically so you don't have to do any math.</li>
+                </ul>
+            </div>
+            <div class="inst-box">
+                <h4>4. Fixing Dugout Mistakes</h4>
+                <ul>
+                    <li>**Wrong count logged?** Click a player's line in the log to expand it, and click 🗑️ next to the bad line item.</li>
+                    <li>**Need quick adjustments?** Put a negative number (like `-5`) in the center box and tap **Commit** to deduct counts immediately.</li>
+                </ul>
+            </div>
+        </div>
+    </details>
 
     <div class="layout">
         <div class="card">
@@ -135,11 +184,29 @@
         </div>
 
         <div class="card">
-            <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px;">
-                <h2>Tournament Log</h2>
-                <button style="width: auto; padding: 8px 15px; margin-bottom: 0;" onclick="addPlayer()">+ Add Player</button>
+            <div class="tabs">
+                <button id="tab-our-team" class="tab-btn active" onclick="switchTab('our-team')">Our Roster</button>
+                <button id="tab-opp-team" class="tab-btn" onclick="switchTab('opp-team')">Opponent Pitchers</button>
             </div>
-            <div id="master-log"></div>
+
+            <!-- OUR TEAM PANEL -->
+            <div id="panel-our-team">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px;">
+                    <h2>Our Tournament Log</h2>
+                    <button style="width: auto; padding: 8px 15px; margin-bottom: 0;" onclick="addPlayer()">+ Add Player</button>
+                </div>
+                <div id="master-log"></div>
+            </div>
+
+            <!-- OPPONENT PANEL -->
+            <div id="panel-opp-team" class="hidden">
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px;">
+                    <h2>Opponent Tracker</h2>
+                    <button style="width: auto; padding: 8px 15px; margin-bottom: 0; background: #64748b; color: white;" onclick="addOpponent()">+ Add Opponent Pitcher</button>
+                </div>
+                <div id="opponent-log"></div>
+            </div>
+
             <button style="background:#cbd5e1; color:#475569; font-size:0.7rem; width:auto; margin-top:20px; border:none;" onclick="resetAll()">Full Tournament Reset</button>
         </div>
     </div>
@@ -150,13 +217,13 @@
 
         // 🟢 PASTE YOUR EXACT FIREBASE CONFIG HERE
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyCHoF69fKGGwbMKLBk10CQkT_26VwjOb2E",
+            authDomain: "tournamentpitchtracker.firebaseapp.com",
+            databaseURL: "https://tournamentpitchtracker-default-rtdb.firebaseio.com",
+            projectId: "tournamentpitchtracker",
+            storageBucket: "tournamentpitchtracker.firebasestorage.app",
+            messagingSenderId: "811876287070",
+            appId: "1:811876287070:web:610c53801c3a436e99eacf"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -164,6 +231,7 @@
 
         let appState = {
             roster: [],
+            opponents: [],
             liveCount: 0,
             activePitcherId: "",
             opponentTeam: "",
@@ -171,15 +239,15 @@
             rules: { gameMax: 50, tourneyMax: 100 }
         };
 
+        let currentActiveTab = 'our-team';
+
         window.attemptAccess = function() {
             const input = document.getElementById('access-code-input').value.toUpperCase();
             const SECRET = "BASEBALL2026"; 
             if (input === SECRET) {
                 document.getElementById('lock-screen').classList.add('hidden');
                 initSync();
-            } else {
-                alert("Access Denied");
-            }
+            } else { alert("Access Denied"); }
         };
 
         function initSync() {
@@ -187,6 +255,7 @@
                 const data = snapshot.val();
                 if (data) {
                     if (!data.roster) data.roster = [];
+                    if (!data.opponents) data.opponents = [];
                     appState = data;
                     updateUI();
                 }
@@ -194,6 +263,14 @@
         }
 
         function pushState() { set(ref(db, 'pitch_tracker/'), appState); }
+
+        window.switchTab = (tabName) => {
+            currentActiveTab = tabName;
+            document.getElementById('tab-our-team').classList.toggle('active', tabName === 'our-team');
+            document.getElementById('tab-opp-team').classList.toggle('active', tabName === 'opp-team');
+            document.getElementById('panel-our-team').classList.toggle('hidden', tabName !== 'our-team');
+            document.getElementById('panel-opp-team').classList.toggle('hidden', tabName !== 'opp-team');
+        };
 
         function getRagClass(current, max) {
             if (!max || max <= 0) return 'rag-green';
@@ -221,11 +298,7 @@
             pushState();
         };
 
-        window.handleOpponentChange = (val) => {
-            appState.opponentTeam = val;
-            pushState();
-        };
-
+        window.handleOpponentChange = (val) => { appState.opponentTeam = val; pushState(); };
         window.handleInningChange = (val) => { appState.currentInning = val; pushState(); };
 
         window.handleRuleChange = () => {
@@ -242,45 +315,97 @@
             pushState();
         };
 
-        window.editPlayer = (id) => {
-            const p = appState.roster.find(x => x.id === id);
-            if (!p) return;
-            const newName = prompt("Edit Player Name:", p.name);
-            if (newName === null) return;
-            const newNum = prompt("Edit Jersey #:", p.num);
-            if (newNum === null) return;
-            p.name = newName.trim() || p.name;
-            p.num = newNum.trim() || p.num;
+        window.addOpponent = () => {
+            const num = prompt("Opponent Jersey #:"); if(!num) return;
+            
+            const prevGamesInput = prompt("How many previous tournament games has this pitcher thrown in? (Enter 0 if fresh):", "0");
+            const totalGames = parseInt(prevGamesInput) || 0;
+            
+            let accumulatedTotal = 0;
+            let loadedStints = [];
+            
+            for (let i = 1; i <= totalGames; i++) {
+                const gamePitchesInput = prompt(`Enter pitch count for Previous Game #${i}:`, "0");
+                const gamePitches = parseInt(gamePitchesInput) || 0;
+                if (gamePitches > 0) {
+                    accumulatedTotal += gamePitches;
+                    loadedStints.push({
+                        opponent: `Prev Game #${i}`,
+                        inning: "N/A",
+                        count: gamePitches,
+                        time: "Pre-load"
+                    });
+                }
+            }
+
+            if(!appState.opponents) appState.opponents = [];
+            appState.opponents.push({ 
+                id: 'opp_' + Date.now(), 
+                name: `Opponent #${num}`, 
+                num: num, 
+                total: accumulatedTotal, 
+                stints: loadedStints 
+            });
             pushState();
         };
 
-        window.removePlayer = (id) => {
-            const p = appState.roster.find(x => x.id === id);
+        window.editPlayer = (id, isOpponent = false) => {
+            const list = isOpponent ? appState.opponents : appState.roster;
+            const p = list.find(x => x.id === id);
             if (!p) return;
-            if (confirm(`Remove ${p.name}? This deletes all their historical stats.`)) {
-                appState.roster = appState.roster.filter(x => x.id !== id);
+            
+            if (isOpponent) {
+                const newNum = prompt("Edit Opponent Jersey #:", p.num);
+                if (newNum === null) return;
+                p.num = newNum.trim() || p.num;
+                p.name = `Opponent #${p.num}`;
+            } else {
+                const newName = prompt("Edit Player Name:", p.name);
+                if (newName === null) return;
+                const newNum = prompt("Edit Jersey #:", p.num);
+                if (newNum === null) return;
+                p.name = newName.trim() || p.name;
+                p.num = newNum.trim() || p.num;
+            }
+            pushState();
+        };
+
+        window.removePlayer = (id, isOpponent = false) => {
+            const p = (isOpponent ? appState.opponents : appState.roster).find(x => x.id === id);
+            if (!p) return;
+            if (confirm(`Remove ${p.name}? This deletes all data.`)) {
+                if (isOpponent) {
+                    appState.opponents = appState.opponents.filter(x => x.id !== id);
+                } else {
+                    appState.roster = appState.roster.filter(x => x.id !== id);
+                }
                 if (appState.activePitcherId === id) { appState.activePitcherId = ""; appState.liveCount = 0; }
                 pushState();
             }
         };
 
-        // NEW: DELETE SPECIFIC STINT ENTRY
-        window.deleteStint = (playerId, stintIndex) => {
-            const p = appState.roster.find(x => x.id === playerId);
+        window.deleteStint = (playerId, stintIndex, isOpponent = false) => {
+            const p = (isOpponent ? appState.opponents : appState.roster).find(x => x.id === playerId);
             if (!p || !p.stints) return;
             
-            if (confirm(`Delete this entry of ${p.stints[stintIndex].count} pitches? The player's total will be adjusted.`)) {
+            if (confirm(`Delete this entry of ${p.stints[stintIndex].count} pitches?`)) {
                 const removedPitches = p.stints[stintIndex].count;
-                p.stints.splice(stintIndex, 1); // Remove the entry
-                p.total -= removedPitches; // Subtract from total
+                p.stints.splice(stintIndex, 1);
+                p.total -= removedPitches;
                 pushState();
             }
         };
 
         window.saveStint = () => {
-            const p = appState.roster.find(x => x.id === appState.activePitcherId);
+            let p = appState.roster.find(x => x.id === appState.activePitcherId);
+            let isOpp = false;
+            if (!p && appState.opponents) {
+                p = appState.opponents.find(x => x.id === appState.activePitcherId);
+                isOpp = true;
+            }
             if (!p || appState.liveCount === 0) return alert("Select pitcher and ensure count > 0");
-            const currentOpponent = appState.opponentTeam.trim() || "Unknown Opponent";
+            
+            const currentOpponent = isOpp ? "Our Team" : (appState.opponentTeam.trim() || "Unknown Opponent");
             if (!p.stints) p.stints = [];
             p.stints.push({ 
                 opponent: currentOpponent,
@@ -294,55 +419,17 @@
         };
 
         window.resetAll = () => {
-            if (confirm("Clear all game logs? (Roster saved)")) {
+            if (confirm("Clear all game logs? (Rosters will be kept)")) {
                 appState.roster.forEach(p => { p.total = 0; p.stints = []; });
+                appState.opponents.forEach(p => { p.total = 0; p.stints = []; });
                 appState.liveCount = 0; appState.opponentTeam = ""; appState.currentInning = "Inning 1";
                 pushState();
             }
         };
 
-        function updateUI() {
-            const gMax = appState.rules.gameMax;
+        function buildLogHTML(playerList, isOpponentTab = false) {
             const tMax = appState.rules.tourneyMax;
-
-            document.getElementById('game-max').value = gMax;
-            document.getElementById('tourney-max').value = tMax;
-            document.getElementById('live-count').value = appState.liveCount;
-            document.getElementById('opponent-team').value = appState.opponentTeam || "";
-            document.getElementById('current-inning').value = appState.currentInning || "Inning 1";
-
-            const select = document.getElementById('active-pitcher');
-            select.innerHTML = '<option value="">-- Select Pitcher --</option>' + 
-                appState.roster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
-
-            const activeP = appState.roster.find(x => x.id === appState.activePitcherId);
-            const liveInput = document.getElementById('live-count');
-
-            if (activeP) {
-                const activeOpponent = appState.opponentTeam.trim() || "Unknown Opponent";
-                const loggedGameTotal = (activeP.stints || [])
-                    .filter(s => s.opponent === activeOpponent)
-                    .reduce((sum, s) => sum + s.count, 0);
-
-                const trueGameTotalPlusLive = loggedGameTotal + appState.liveCount;
-                const tourneyTotalPlusLive = activeP.total + appState.liveCount;
-                
-                const gp = document.getElementById('game-pill');
-                gp.innerText = `Game: ${trueGameTotalPlusLive} / ${gMax}`;
-                gp.className = `status-pill ${getRagClass(trueGameTotalPlusLive, gMax)}`;
-
-                const tp = document.getElementById('tourney-pill');
-                tp.innerText = `Tourney: ${tourneyTotalPlusLive} / ${tMax}`;
-                tp.className = `status-pill ${getRagClass(tourneyTotalPlusLive, tMax)}`;
-
-                const gClass = getRagClass(trueGameTotalPlusLive, gMax).replace('rag-', 'text-');
-                const tClass = getRagClass(tourneyTotalPlusLive, tMax).replace('rag-', 'text-');
-                const severity = ['text-red', 'text-orange', 'text-yellow', 'text-green'];
-                liveInput.className = `counter-input ${severity.find(c => c === gClass || c === tClass)}`;
-            }
-
-            const log = document.getElementById('master-log');
-            log.innerHTML = [...appState.roster].sort((a,b) => b.total - a.total).map(p => {
+            return [...playerList].sort((a,b) => b.total - a.total).map(p => {
                 const gamesMap = {};
                 if (p.stints) {
                     p.stints.forEach((s, idx) => {
@@ -360,14 +447,14 @@
                             <div class="game-group">
                                 <div class="game-group-header">
                                     <span>vs. ${opponentName}</span>
-                                    <span>Game: ${gameData.gameTotal}</span>
+                                    <span>Total: ${gameData.gameTotal}</span>
                                 </div>
                                 ${gameData.items.map(s => `
                                     <div class="stint-item">
                                         <span>${s.inning}</span>
                                         <b>${s.count}</b>
                                         <span>${s.time}</span>
-                                        <button class="del-stint-btn" onclick="deleteStint('${p.id}', ${s.originalIndex})">🗑</button>
+                                        <button class="del-stint-btn" onclick="deleteStint('${p.id}', ${s.originalIndex}, ${isOpponentTab})">🗑</button>
                                     </div>
                                 `).join('')}
                             </div>
@@ -378,19 +465,82 @@
                 return `
                     <div class="player-row">
                         <div class="player-header" onclick="this.nextElementSibling.classList.toggle('open')">
-                            <span>${p.name} <small>#${p.num}</small></span>
+                            <span>${p.name}</span>
                             <span class="badge ${getRagClass(p.total, tMax)}">${p.total} / ${tMax}</span>
                         </div>
                         <div class="stint-list">
                             ${gamesHTML}
                             <div class="player-mgmt-panel">
-                                <button class="btn-sm" style="background:#cbd5e1;" onclick="editPlayer('${p.id}')">✏️ Edit</button>
-                                <button class="btn-sm" style="background:var(--rag-red); color:white;" onclick="removePlayer('${p.id}')">🗑️ Remove</button>
+                                <button class="btn-sm" style="background:#cbd5e1;" onclick="editPlayer('${p.id}', ${isOpponentTab})">✏️ Edit</button>
+                                <button class="btn-sm" style="background:var(--rag-red); color:white;" onclick="removePlayer('${p.id}', ${isOpponentTab})">🗑️ Remove</button>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
+        }
+
+        function updateUI() {
+            const gMax = appState.rules.gameMax;
+            const tMax = appState.rules.tourneyMax;
+
+            document.getElementById('game-max').value = gMax;
+            document.getElementById('tourney-max').value = tMax;
+            document.getElementById('live-count').value = appState.liveCount;
+            document.getElementById('opponent-team').value = appState.opponentTeam || "";
+            document.getElementById('current-inning').value = appState.currentInning || "Inning 1";
+
+            const select = document.getElementById('active-pitcher');
+            let optionsHTML = '<option value="">-- Select Pitcher --</option>';
+            optionsHTML += '<optgroup label="Our Roster">';
+            optionsHTML += appState.roster.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>${p.name} (#${p.num})</option>`).join('');
+            optionsHTML += '</optgroup>';
+            
+            if (appState.opponents && appState.opponents.length > 0) {
+                optionsHTML += '<optgroup label="Opponent Pitchers">';
+                optionsHTML += appState.opponents.map(p => `<option value="${p.id}" ${p.id === appState.activePitcherId ? 'selected' : ''}>[OPP] Jersey #${p.num}</option>`).join('');
+                optionsHTML += '</optgroup>';
+            }
+            select.innerHTML = optionsHTML;
+
+            let activeP = appState.roster.find(x => x.id === appState.activePitcherId);
+            let isOpp = false;
+            if (!activeP && appState.opponents) {
+                activeP = appState.opponents.find(x => x.id === appState.activePitcherId);
+                isOpp = true;
+            }
+            
+            const liveInput = document.getElementById('live-count');
+
+            if (activeP) {
+                const activeOpponent = isOpp ? "Our Team" : (appState.opponentTeam.trim() || "Unknown Opponent");
+                const loggedGameTotal = (activeP.stints || [])
+                    .filter(s => s.opponent === activeOpponent)
+                    .reduce((sum, s) => sum + s.count, 0);
+
+                const trueGameTotalPlusLive = loggedGameTotal + appState.liveCount;
+                const tourneyTotalPlusLive = activeP.total + appState.liveCount;
+                
+                const gp = document.getElementById('game-pill');
+                gp.innerText = `Game: ${trueGameTotalPlusLive} / ${gMax}`;
+                gp.className = `status-pill ${getRagClass(trueGameTotalPlusLive, gMax)}`;
+
+                const tp = document.getElementById('tourney-pill');
+                tp.innerText = `Total: ${tourneyTotalPlusLive} / ${tMax}`;
+                tp.className = `status-pill ${getRagClass(tourneyTotalPlusLive, tMax)}`;
+
+                const gClass = getRagClass(trueGameTotalPlusLive, gMax).replace('rag-', 'text-');
+                const tClass = getRagClass(tourneyTotalPlusLive, tMax).replace('rag-', 'text-');
+                const severity = ['text-red', 'text-orange', 'text-yellow', 'text-green'];
+                liveInput.className = `counter-input ${severity.find(c => c === gClass || c === tClass)}`;
+            } else {
+                liveInput.className = "counter-input text-green";
+                document.getElementById('game-pill').className = "status-pill rag-green";
+                document.getElementById('tourney-pill').className = "status-pill rag-green";
+            }
+
+            document.getElementById('master-log').innerHTML = buildLogHTML(appState.roster, false);
+            document.getElementById('opponent-log').innerHTML = buildLogHTML(appState.opponents || [], true);
         }
     </script>
 </body>
